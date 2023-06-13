@@ -80,7 +80,6 @@ set EXCHANGE_NETWORK_BIDIRECTIONAL within EXCHANGE_NETWORK_R; # Exchange network
 ## Parameters added to include time series in the model [Table 1]
 param electricity_time_series {COUNTRIES, HOURS, TYPICAL_DAYS} >= 0, <= 1; # %_elec [-]: factor for sharing lighting across typical days (adding up to 1)
 param heating_time_series {COUNTRIES, HOURS, TYPICAL_DAYS} >= 0, <= 1; # %_sh [-]: factor for sharing space heating across typical days (adding up to 1)
-param cooling_time_series {COUNTRIES, HOURS, TYPICAL_DAYS} >= 0, <= 1;
 param mob_pass_time_series {COUNTRIES, HOURS, TYPICAL_DAYS} >= 0, <= 1; # %_pass [-]: factor for sharing passenger transportation across Typical days (adding up to 1) based on https://www.fhwa.dot.gov/policy/2013cpr/chap1.cfm
 param mob_freight_time_series {COUNTRIES, HOURS, TYPICAL_DAYS} >= 0, <= 1; # %_fr [-]: factor for sharing freight transportation across Typical days (adding up to 1)
 param c_p_t {TECHNOLOGIES, COUNTRIES, HOURS, TYPICAL_DAYS} default 1; #Hourly capacity factor [-]. If = 1 (default value) <=> no impact.
@@ -224,7 +223,7 @@ var Transfer_capacity{c1 in COUNTRIES, c2 in COUNTRIES, i in RESOURCES} >= tc_mi
 #-----------------------------------------
 
 # [Figure 4] From annual energy demand to hourly power demand. End_Uses is non-zero only for demand layers.
-subject to end_uses_t {c in COUNTRIES, l in LAYERS, h in HOURS, td in TYPICAL_DAYS}:
+subject to end_uses_t {c in REGIONS, l in LAYERS, h in HOURS, td in TYPICAL_DAYS}:
 	End_uses [c, l, h, td] = (if l == "ELECTRICITY" 
 		then
 			(end_uses_input[c,l] / total_time + end_uses_input[c,"LIGHTING"] * electricity_time_series [c, h, td] / t_op [h, td] ) + Network_losses [c,l,h,td]
@@ -232,6 +231,8 @@ subject to end_uses_t {c in COUNTRIES, l in LAYERS, h in HOURS, td in TYPICAL_DA
 			(end_uses_input[c,"HEAT_LOW_T_HW"] / total_time + end_uses_input[c,"HEAT_LOW_T_SH"] * heating_time_series [c, h, td] / t_op [h, td] ) * Share_heat_dhn[c] + Network_losses [c,l,h,td]
 		else (if l == "HEAT_LOW_T_DECEN" then
 			(end_uses_input[c,"HEAT_LOW_T_HW"] / total_time + end_uses_input[c,"HEAT_LOW_T_SH"] * heating_time_series [c, h, td] / t_op [h, td] ) * (1 - Share_heat_dhn[c])
+		else (if l == "COOKING" then
+			end_uses_input[c,l] / total_time
 		else (if l == "MOB_PUBLIC" then
 			(end_uses_input[c,"MOBILITY_PASSENGER"] * mob_pass_time_series [c, h, td] / t_op [h, td]  ) * Share_mobility_public[c]
 		else (if l == "MOB_PRIVATE" then
@@ -242,11 +243,9 @@ subject to end_uses_t {c in COUNTRIES, l in LAYERS, h in HOURS, td in TYPICAL_DA
 			(end_uses_input[c,"MOBILITY_FREIGHT"]   * mob_freight_time_series [c, h, td] / t_op [h, td] ) *  Share_freight_road[c]
 		else (if l == "MOB_FREIGHT_BOAT" then
 			(end_uses_input[c,"MOBILITY_FREIGHT"]   * mob_freight_time_series [c, h, td] / t_op [h, td] ) *  Share_freight_boat[c]
+		else (if l == "MOB_FREIGHT_AIR" then
+			(end_uses_input[c,"MOBILITY_FREIGHT"]   * mob_freight_time_series [c, h, td] / t_op [h, td] ) *  (1 - Share_freight_boat[c] - Share_freight_road[c] - Share_freight_train[c])
 		else (if l == "HEAT_HIGH_T" then
-			end_uses_input[c,l] / total_time
-		else (if l == "SPACE_COOLING" then
-			end_uses_input[c,l] * cooling_time_series [c, h, td] / t_op [h, td]
-		else (if l == "PROCESS_COOLING" then
 			end_uses_input[c,l] / total_time
 		else (if l == "NON_ENERGY" then
 			end_uses_input[c,l] / total_time
@@ -289,10 +288,7 @@ var Curt{c in COUNTRIES} >=0;
 subject to compute_curt {c in COUNTRIES} :
 	Curt[c] = sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]}   (F[c,"PV"]           *c_p_t["PV",c,h,td]            - F_t[c,"PV",h,td])
 			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (F[c,"WIND_ONSHORE"] *c_p_t["WIND_ONSHORE",c,h,td]  - F_t[c,"WIND_ONSHORE",h,td])
-			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (F[c,"WIND_OFFSHORE"]*c_p_t["WIND_OFFSHORE",c,h,td] - F_t[c,"WIND_OFFSHORE",h,td])
-			  + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]}   (F[c,"STIRLING_DISH"] * c_p_t["STIRLING_DISH",c,h,td] - F_t[c,"STIRLING_DISH",h,td])
-			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]}   (F[c,"PT_COLLECTOR"] * c_p_t["PT_COLLECTOR",c,h,td] - F_t[c,"PT_COLLECTOR",h,td])/(-layers_in_out["PT_POWER_BLOCK","PT_HEAT"])
-			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]}   (F[c,"ST_COLLECTOR"] * c_p_t["ST_COLLECTOR",c,h,td] - F_t[c,"ST_COLLECTOR",h,td])/(-layers_in_out["ST_POWER_BLOCK","ST_HEAT"]);
+			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (F[c,"WIND_OFFSHORE"]*c_p_t["WIND_OFFSHORE",c,h,td] - F_t[c,"WIND_OFFSHORE",h,td]);
 
 
 
@@ -522,21 +518,7 @@ subject to extra_efficiency{c in COUNTRIES}:
 	
 # [Eq. ..] Limit electricity import capacity
 subject to max_elec_import {c in COUNTRIES, h in HOURS, td in TYPICAL_DAYS}:
-	R_t_exterior [c,"ELECTRICITY", h, td] * t_op [h, td] <= import_capacity[c]; 
-
-## Variant equations for hydro dams	
-# [Eq. 40] Seasonal storage in hydro dams.
-# When installed power of new dams 0 -> 0.44, maximum storage capacity changes linearly 0 -> 2400 GWh/y
-subject to storage_level_hydro_dams {c in COUNTRIES diff CWITHOUTDAM}: 
-	F [c,"DAM_STORAGE"] <= f_min [c,"DAM_STORAGE"] + (f_max [c,"DAM_STORAGE"]-f_min [c,"DAM_STORAGE"]) * (F [c,"HYDRO_DAM"] - f_min [c,"HYDRO_DAM"])/(f_max [c,"HYDRO_DAM"] - f_min [c,"HYDRO_DAM"]);
-
-# [Eq. 41] Hydro dams can stored the input energy and restore it whenever. Hence, inlet is the input river and outlet is bounded by max capacity
-subject to impose_hydro_dams_inflow {c in COUNTRIES, h in HOURS, td in TYPICAL_DAYS}: 
-	Storage_in [c, "DAM_STORAGE", "ELECTRICITY", h, td] = F_t [c, "HYDRO_DAM", h, td];
-
-# [Eq. 42] Hydro dams production is lower than installed F_t capacity:
-subject to limit_hydro_dams_output {c in COUNTRIES, h in HOURS, td in TYPICAL_DAYS}: 
-	Storage_out [c, "DAM_STORAGE", "ELECTRICITY", h, td] <= F [c,"HYDRO_DAM"];
+	R_t_exterior [c,"ELECTRICITY", h, td] * t_op [h, td] <= import_capacity[c];
 
 
 # [Eq. 39] Limit surface area for solar

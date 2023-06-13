@@ -9,9 +9,9 @@ FR	0.779	0.029	0.192
 IE-UK	0.779	0.029	0.192
 ;
 param :	re_share_primary	gwp_limit	import_capacity	solar_area := 
-ES-PT	0	Infinity	0	Infinity
-FR	0	Infinity	0	Infinity
-IE-UK	0	Infinity	0	Infinity
+ES-PT	0.0	Infinity	0.0	Infinity
+FR	0.0	Infinity	0.0	Infinity
+IE-UK	0.0	Infinity	0.0	Infinity
 ;
 param :	share_mobility_public_min	share_mobility_public_max	share_freight_train_min	share_freight_train_max := 
 ES-PT	0.199	0.5	0.109	0.25

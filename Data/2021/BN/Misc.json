@@ -1,0 +1,19 @@
+{
+    "re_share_primary" : 0,
+	"gwp_limit": 1e15,
+    "import_capacity" : 0,
+    "solar_area" : 47764.3913,
+	"share_mobility_public_min" : 0.062,
+	"share_mobility_public_max" : 0.06221,
+    "share_freight_train_min" : 0.009,
+    "share_freight_train_max" : 0.00918,
+    "share_freight_road_min" : 0.715,
+    "share_freight_road_max" : 0.71595,
+    "share_freight_boat_min" : 0.00095,
+    "share_freight_boat_max" : 0.00096,
+    "share_freight_air_min" : 0.273,
+    "share_freight_air_max" : 0.27391,
+    "share_heat_dhn_min" : 0.00,
+    "share_heat_dhn_max" : 0.00,
+    "share_ned" : {"HVC":1.00, "METHANOL":0.00, "AMMONIA":0.00}
+}

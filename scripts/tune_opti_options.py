@@ -33,14 +33,13 @@ def one_run(ampl_options)
     # name of timeseries in DATA.xlsx and corresponding name in ESTD data file
     # for EUD timeseries
     EUD_params = {'Electricity (%_elec)': 'param electricity_time_series :=',
-                  'Space Heating (%_sh)': 'param heating_time_series :=', 'Space Cooling': 'param cooling_time_series :=',
                   'Passanger mobility (%_pass)': 'param mob_pass_time_series :=',
                   'Freight mobility (%_freight)': 'param mob_freight_time_series :='}
     # for resources timeseries that have only 1 tech linked to it
     RES_params = {'PV': 'PV', 'Wind_offshore': 'WIND_OFFSHORE', 'Wind_onshore': 'WIND_ONSHORE'}
     # for resources timeseries that have several techs linked to it
-    RES_mult_params = {'Tidal': ['TIDAL_STREAM', 'TIDAL_RANGE'], 'Hydro_dam': ['HYDRO_DAM'], 'Hydro_river': ['HYDRO_RIVER'],
-                       'Solar': ['DHN_SOLAR', 'DEC_SOLAR', 'PT_COLLECTOR', 'ST_COLLECTOR', 'STIRLING_DISH']}
+    RES_mult_params = {'Hydro_dam': ['HYDRO_DAM'], 'Hydro_river': ['HYDRO_RIVER'],
+                       'Solar': ['DHN_SOLAR', 'DEC_SOLAR']}
 
     # path kmedoid_clustering
     step1_path = os.path.join(path,'esmc/preprocessing/kmedoid_clustering')

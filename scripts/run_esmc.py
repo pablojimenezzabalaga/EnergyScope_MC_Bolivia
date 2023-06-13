@@ -3,7 +3,7 @@ from pathlib import Path
 
 # additional line for VS studio
 import sys
-sys.path.append('/home/pthiran/EnergyScope_multi_cells/')
+sys.path.append(r'C:\Users\PABLO\PycharmProjects\EnergyScope_multi_cells')
 from esmc import Esmc
 
 
@@ -13,7 +13,7 @@ for t in tds:
     print('Nbr_TDs', t)
 
     # specify ampl_path (set None if ampl is in Path environment variable or the path to ampl if not)
-    ampl_path = Path(r'C:\Users\pathiran\ampl_mswin64')
+    ampl_path = Path(r'C:\Program Files\AMPL\ampl_mswin64')
 
     # info to switch off unused constraints
     gwp_limit_overall = None
@@ -21,16 +21,19 @@ for t in tds:
     f_perc = False
 
     # define configuration
-    config = {'case_study': 'test',
+    config = {'case_study': 'test_Bolivia_2021',
               'comment': 'none',
-              'regions_names': ['ES-PT', 'FR', 'IE-UK'],
-              'ref_region': 'FR',
+              'regions_names': ['CB', 'LP', 'OR', 'PT', 'CH', 'SC', 'BN', 'TJ', 'SAYA', 'SAVC', 'SATA', 'SASM', 'SASI', 'SANA', 'SAMI', 'SAIT', 'SAGB', 'SAER', 'SAEE', 'SACHQ', 'SACHA', 'SACA', 'SABE'],
+              'ref_region': 'CB',
               'gwp_limit_overall': gwp_limit_overall,
               're_share_primary': re_share_primary,
               'f_perc': f_perc,
-              'year': 2035}
+              'year': 2021}
+
     # initialize EnergyScope Multi-cells framework
     my_model = Esmc(config, nbr_td=t)
+
+    Esmc.delete_if_exists(my_model.dat_dir)
 
     # read the indep data
     my_model.read_data_indep()
@@ -41,7 +44,7 @@ for t in tds:
     # Initialize and solve the temporal aggregation algorithm:
     # if already run, set algo='read' to read the solution of the clustering
     # else, set algo='kmedoid' to run kmedoid clustering algorithm to choose typical days (TDs)
-    my_model.init_ta(algo='read', ampl_path=ampl_path)
+    my_model.init_ta(algo='kmedoid', ampl_path=ampl_path)
 
     # Print the time related data of the energy system optimization model using the TDs to represent it
     my_model.print_td_data()

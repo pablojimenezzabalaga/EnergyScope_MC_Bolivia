@@ -117,7 +117,6 @@ param total_time := sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DA
 ## Parameters added to include time series in the model [Table 1]
 param electricity_time_series {REGIONS, HOURS, TYPICAL_DAYS} >= 0, <= 1; # %_elec [-]: factor for sharing lighting across typical days (adding up to 1)
 param heating_time_series {REGIONS, HOURS, TYPICAL_DAYS} >= 0, <= 1; # %_sh [-]: factor for sharing space heating across typical days (adding up to 1)
-param cooling_time_series {REGIONS, HOURS, TYPICAL_DAYS} >= 0, <= 1;
 param mob_pass_time_series {REGIONS, HOURS, TYPICAL_DAYS} >= 0, <= 1; # %_pass [-]: factor for sharing passenger transportation across Typical days (adding up to 1) based on https://www.fhwa.dot.gov/policy/2013cpr/chap1.cfm
 param mob_freight_time_series {REGIONS, HOURS, TYPICAL_DAYS} >= 0, <= 1; # %_fr [-]: factor for sharing freight transportation across Typical days (adding up to 1)
 param c_p_t {TECHNOLOGIES, REGIONS, HOURS, TYPICAL_DAYS} default 1; #Hourly capacity factor [-]. If = 1 (default value) <=> no impact.
@@ -138,7 +137,9 @@ param share_freight_train_max{REGIONS} >= 0, <= 1; # %_rail,min [-]: max limit f
 param share_freight_boat_min{REGIONS}  >= 0, <= 1; # %_boat,min [-]: min limit for penetration of boat in freight transportation
 param share_freight_boat_max{REGIONS}  >= 0, <= 1; # %_boat,min [-]: max limit for penetration of boat in freight transportation
 param share_freight_road_min{REGIONS}  >= 0, <= 1; # %_road,min [-]: min limit for penetration of truck in freight transportation
-param share_freight_road_max{REGIONS}  >= 0, <= 3; # %_road,min [-]: max limit for penetration of truck in freight transportation
+param share_freight_road_max{REGIONS}  >= 0, <= 1; # %_road,min [-]: max limit for penetration of truck in freight transportation
+param share_freight_air_min{REGIONS}  >= 0, <= 1; # %_air,min [-]: min limit for penetration of aircraft in freight transportation
+param share_freight_air_max{REGIONS}  >= 0, <= 1; # %_air,min [-]: max limit for penetration of aircraft in freight transportation
 param share_ned {REGIONS, END_USES_TYPES_OF_CATEGORY["NON_ENERGY"]} >= 0, <= 1; # %_ned [-] share of non-energy demand per type of feedstocks.
 
 
@@ -157,7 +158,6 @@ param avail_exterior {REGIONS, RESOURCES} >= 0;
 param c_op_local {REGIONS, RESOURCES} >= 0; # cost of resources in the different periods [MCHF/GWh]
 param vehicule_capacity {TECHNOLOGIES} >=0, default 0; #  veh_capa [capacity/vehicles] Average capacity (pass-km/h or t-km/h) per vehicle. It makes the link between F and the number of vehicles
 param peak_sh_factor{REGIONS} >= 0;   # %_Peak_sh [-]: ratio between highest yearly demand and highest TDs demand
-param peak_sc_factor{REGIONS} >= 0;   # %_Peak_sc [-]: ratio between highest yearly demand and highest TDs deman
 param c_inv {REGIONS, TECHNOLOGIES} >= 0; # Specific investment cost [MCHF/GW].[MCHF/GWh] for STORAGE_TECH
 param c_maint {REGIONS, TECHNOLOGIES} >= 0; # O&M cost [MCHF/GW/year]: O&M cost does not include resource (fuel) cost. [MCHF/GWh/year] for STORAGE_TECH
 param lifetime {REGIONS, TECHNOLOGIES} >= 0; # n: lifetime [years]
@@ -193,6 +193,7 @@ var Share_mobility_public{c in REGIONS} >= share_mobility_public_min[c], <= shar
 var Share_freight_train{c in REGIONS}, >= share_freight_train_min[c], <= share_freight_train_max[c]; # %_Rail: Ratio [0; 1] rail transport over total freight transport
 var Share_freight_road{c in REGIONS}, >= share_freight_road_min[c], <= share_freight_road_max[c]; # %_Road: Ratio [0; 1] Road transport over total freight transport
 var Share_freight_boat{c in REGIONS}, >= share_freight_boat_min[c], <= share_freight_boat_max[c]; # %_Boat: Ratio [0; 1] boat transport over total freight transport
+var Share_freight_air{c in REGIONS}, >= share_freight_air_min[c], <= share_freight_air_max[c]; # %_Air: Ratio [0; 1] air transport over total freight transport
 var Share_heat_dhn{c in REGIONS}, >= share_heat_dhn_min[c], <= share_heat_dhn_max[c]; # %_DHN: Ratio [0; 1] centralized over total low-temperature heat
 var F {REGIONS, TECHNOLOGIES} >= 0; # F: Installed capacity ([GW]) with respect to main output (see layers_in_out). [GWh] for STORAGE_TECH.
 var F_t {REGIONS, TECHNOLOGIES, HOURS, TYPICAL_DAYS} >= 0; # F_t: Operation in each period [GW] or, for STORAGE_TECH, storage level [GWh]. multiplication factor with respect to the values in layers_in_out table. Takes into account c_p
@@ -235,18 +236,20 @@ var Curt{REGIONS} >=0;
 ###      CONSTRAINTS Eqs [1-42]       ###
 #########################################
 
-## End-uses demand calculation constraints 
+## End-uses demand calculation constraints
 #-----------------------------------------
 
 # [Figure 4] From annual energy demand to hourly power demand. End_Uses is non-zero only for demand layers.
 subject to end_uses_t {c in REGIONS, l in LAYERS, h in HOURS, td in TYPICAL_DAYS}:
-	End_uses [c, l, h, td] = (if l == "ELECTRICITY" 
+	End_uses [c, l, h, td] = (if l == "ELECTRICITY"
 		then
 			(end_uses_input[c,l] / total_time + end_uses_input[c,"LIGHTING"] * electricity_time_series [c, h, td] / t_op [h, td] ) + Network_losses [c,l,h,td]
 		else (if l == "HEAT_LOW_T_DHN" then
 			(end_uses_input[c,"HEAT_LOW_T_HW"] / total_time + end_uses_input[c,"HEAT_LOW_T_SH"] * heating_time_series [c, h, td] / t_op [h, td] ) * Share_heat_dhn[c] + Network_losses [c,l,h,td]
 		else (if l == "HEAT_LOW_T_DECEN" then
 			(end_uses_input[c,"HEAT_LOW_T_HW"] / total_time + end_uses_input[c,"HEAT_LOW_T_SH"] * heating_time_series [c, h, td] / t_op [h, td] ) * (1 - Share_heat_dhn[c])
+		else (if l == "COOKING" then
+			end_uses_input[c,l] / total_time
 		else (if l == "MOB_PUBLIC" then
 			(end_uses_input[c,"MOBILITY_PASSENGER"] * mob_pass_time_series [c, h, td] / t_op [h, td]  ) * Share_mobility_public[c]
 		else (if l == "MOB_PRIVATE" then
@@ -257,11 +260,9 @@ subject to end_uses_t {c in REGIONS, l in LAYERS, h in HOURS, td in TYPICAL_DAYS
 			(end_uses_input[c,"MOBILITY_FREIGHT"]   * mob_freight_time_series [c, h, td] / t_op [h, td] ) *  Share_freight_road[c]
 		else (if l == "MOB_FREIGHT_BOAT" then
 			(end_uses_input[c,"MOBILITY_FREIGHT"]   * mob_freight_time_series [c, h, td] / t_op [h, td] ) *  Share_freight_boat[c]
+		else (if l == "MOB_FREIGHT_AIR" then
+			(end_uses_input[c,"MOBILITY_FREIGHT"]   * mob_freight_time_series [c, h, td] / t_op [h, td] ) *  Share_freight_air[c]
 		else (if l == "HEAT_HIGH_T" then
-			end_uses_input[c,l] / total_time
-		else (if l == "SPACE_COOLING" then
-			end_uses_input[c,l] * cooling_time_series [c, h, td] / t_op [h, td]
-		else (if l == "PROCESS_COOLING" then
 			end_uses_input[c,l] / total_time
 		else (if l == "HVC" then
 			end_uses_input[c,"NON_ENERGY"] * share_ned [c, "HVC"] / total_time
@@ -269,24 +270,24 @@ subject to end_uses_t {c in REGIONS, l in LAYERS, h in HOURS, td in TYPICAL_DAYS
 			end_uses_input[c, "NON_ENERGY"] * share_ned [c, "AMMONIA"] / total_time
 		else (if l == "METHANOL" then
 			end_uses_input[c, "NON_ENERGY"] * share_ned [c, "METHANOL"] / total_time
-		else 
+		else
 			0 )))))))))))))); # For all layers which don't have an end-use demand
 
 
 ## Cost
 #------
 
-# [Eq. 1]	
+# [Eq. 1]
 subject to totalcost_cal{c in REGIONS}:
 	TotalCost[c] = sum {j in TECHNOLOGIES} (tau [c,j]  * C_inv [c,j] + C_maint [c,j]) + sum {i in RESOURCES} C_op [c,i] + sum {i in EXCHANGE_NETWORK_R} C_exch_network [c,i];
-	
+
 # [Eq. 3] Investment cost of each technology
-subject to investment_cost_calc {c in REGIONS, j in TECHNOLOGIES}: 
+subject to investment_cost_calc {c in REGIONS, j in TECHNOLOGIES}:
 	C_inv [c,j] = c_inv [c,j] * F [c,j];
-		
+
 # [Eq. 4] O&M cost of each technology
-subject to main_cost_calc {c in REGIONS, j in TECHNOLOGIES}: 
-	C_maint [c,j] = c_maint [c,j] * F [c,j];		
+subject to main_cost_calc {c in REGIONS, j in TECHNOLOGIES}:
+	C_maint [c,j] = c_maint [c,j] * F [c,j];
 
 # [Eq. 5] Total cost of each resource
 subject to op_cost_calc {c in REGIONS, i in RESOURCES}:
@@ -306,10 +307,7 @@ subject to exch_network_cost_calc_bidirectional {c in REGIONS, i in EXCHANGE_NET
 subject to compute_curt {c in REGIONS} :
 	Curt[c] = sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]}   (F[c,"PV"]           *c_p_t["PV",c,h,td]            - F_t[c,"PV",h,td])
 			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (F[c,"WIND_ONSHORE"] *c_p_t["WIND_ONSHORE",c,h,td]  - F_t[c,"WIND_ONSHORE",h,td])
-			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (F[c,"WIND_OFFSHORE"]*c_p_t["WIND_OFFSHORE",c,h,td] - F_t[c,"WIND_OFFSHORE",h,td])
-			  + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]}   (F[c,"STIRLING_DISH"] * c_p_t["STIRLING_DISH",c,h,td] - F_t[c,"STIRLING_DISH",h,td])
-			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]}   (F[c,"PT_COLLECTOR"] * c_p_t["PT_COLLECTOR",c,h,td] - F_t[c,"PT_COLLECTOR",h,td])/(-layers_in_out["PT_POWER_BLOCK","PT_HEAT"])
-			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]}   (F[c,"ST_COLLECTOR"] * c_p_t["ST_COLLECTOR",c,h,td] - F_t[c,"ST_COLLECTOR",h,td])/(-layers_in_out["ST_POWER_BLOCK","ST_HEAT"]);
+			 + sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (F[c,"WIND_OFFSHORE"]*c_p_t["WIND_OFFSHORE",c,h,td] - F_t[c,"WIND_OFFSHORE",h,td]);
 
 
 
@@ -321,42 +319,42 @@ subject to compute_curt {c in REGIONS} :
 # [Eq. 6]
 subject to totalGWP_calc {c in REGIONS}:
 	TotalGWP[c] = sum {j in TECHNOLOGIES} (GWP_constr [c,j] / lifetime [c,j]) + sum {i in RESOURCES} GWP_op [c,i];
-	
+
 # [Eq. 7]
 subject to gwp_constr_calc {c in REGIONS, j in TECHNOLOGIES}:
 	GWP_constr [c,j] = gwp_constr [c,j] * F [c,j];
 
 # [Eq. 8]
 subject to gwp_op_calc {c in REGIONS, i in RESOURCES}:
-	GWP_op [c,i] = sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (R_t_local [c, i, h, td] * gwp_op_local [c, i] * t_op [h, td] + R_t_exterior [c, i, h, td] * gwp_op_exterior [i] * t_op [h, td] );	
+	GWP_op [c,i] = sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (R_t_local [c, i, h, td] * gwp_op_local [c, i] * t_op [h, td] + R_t_exterior [c, i, h, td] * gwp_op_exterior [i] * t_op [h, td] );
 
 # Direct emissions of the fuels, to match GWP historical data
 subject to co2_net_calc {c in REGIONS, i in RESOURCES}:
-	CO2_net [c,i] = sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (R_t_local [c, i, h, td] * co2_net [i] * t_op [h, td] + R_t_exterior [c, i, h, td] * co2_net [i] * t_op [h, td] );	
+	CO2_net [c,i] = sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (R_t_local [c, i, h, td] * co2_net [i] * t_op [h, td] + R_t_exterior [c, i, h, td] * co2_net [i] * t_op [h, td] );
 
-	
+
 ## Multiplication factor
 #-----------------------
-	
+
 # [Eq. 9] min & max limit to the size of each technology
 subject to size_limit {c in REGIONS, j in TECHNOLOGIES}:
 	f_min [c,j] <= F [c,j] <= f_max [c,j];
-	
+
 # [Eq. 10] relation between power and capacity via period capacity factor. This forces max hourly output (e.g. renewables)
 subject to capacity_factor_t {c in REGIONS, j in TECHNOLOGIES, h in HOURS, td in TYPICAL_DAYS}:
 	F_t [c,j, h, td] <= F [c,j] * c_p_t [j, c, h, td];
-	
+
 # [Eq. 11] relation between mult_t and mult via yearly capacity factor. This one forces total annual output
 subject to capacity_factor {c in REGIONS, j in TECHNOLOGIES}:
-	sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (F_t [c, j, h, td] * t_op [h, td]) <= F [c, j] * c_p [c, j] * total_time;	
-		
+	sum {t in PERIODS, h in HOUR_OF_PERIOD [t], td in TYPICAL_DAY_OF_PERIOD [t]} (F_t [c, j, h, td] * t_op [h, td]) <= F [c, j] * c_p [c, j] * total_time;
+
 ## Resources
 #-----------
 
 # [Eq. 12] Resources availability equation
 subject to resource_availability_local {c in REGIONS, i in RESOURCES}:
 	sum {t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (R_t_local [c, i, h, td] * t_op [h, td]) <= avail_local [c, i];
-	
+
 subject to resource_availability_exterior {c in REGIONS, i in RESOURCES}:
 	sum {t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (R_t_exterior [c, i, h, td] * t_op [h, td]) <= avail_exterior [c, i];
 
@@ -366,47 +364,47 @@ subject to resource_availability_exterior {c in REGIONS, i in RESOURCES}:
 # [Eq. 13] Layer balance equation with storage. Layers: input > 0, output < 0. Demand > 0. Storage: in > 0, out > 0;
 # output from technologies/resources/storage - input to technologies/storage = demand. Demand has default value of 0 for layers which are not end_uses
 subject to layer_balance {c in REGIONS, l in LAYERS, h in HOURS, td in TYPICAL_DAYS}:
-		sum {i in RESOURCES} (layers_in_out[i, l] * (R_t_local [c, i, h, td] + R_t_exterior [c, i, h, td] - (1 + exchange_losses[i])* R_t_export[c, i, h, td] + R_t_import[c, i, h, td])) 
-		+ sum {k in TECHNOLOGIES diff STORAGE_TECH} (layers_in_out[k, l] * F_t [c, k, h, td]) 
+		sum {i in RESOURCES} (layers_in_out[i, l] * (R_t_local [c, i, h, td] + R_t_exterior [c, i, h, td] - (1 + exchange_losses[i])* R_t_export[c, i, h, td] + R_t_import[c, i, h, td]))
+		+ sum {k in TECHNOLOGIES diff STORAGE_TECH} (layers_in_out[k, l] * F_t [c, k, h, td])
 		+ sum {j in STORAGE_TECH} ( Storage_out [c, j, l, h, td] - Storage_in [c, j, l, h, td] )
 		- End_uses [c, l, h, td]
 		= 0;
-		
-	
-## Storage	
+
+
+## Storage
 #---------
-	
+
 # [Eq. 14] The level of the storage represents the amount of energy stored at a certain time.
 subject to storage_level {c in REGIONS, j in STORAGE_TECH, t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]}:
 	Storage_level [c, j, t] = (if t == 1 then
 	 			Storage_level [c, j, card(PERIODS)] * (1.0 -  storage_losses[j])
-				+ t_op [h, td] * (   (sum {l in LAYERS: storage_eff_in [j,l] > 0}  (Storage_in [c, j, l, h, td]  * storage_eff_in  [j, l])) 
+				+ t_op [h, td] * (   (sum {l in LAYERS: storage_eff_in [j,l] > 0}  (Storage_in [c, j, l, h, td]  * storage_eff_in  [j, l]))
 				                   - (sum {l in LAYERS: storage_eff_out [j,l] > 0} (Storage_out [c, j, l, h, td] / storage_eff_out [j, l])))
 	else
 	 			Storage_level [c, j, t-1] * (1.0 -  storage_losses[j])
-				+ t_op [h, td] * (   (sum {l in LAYERS: storage_eff_in [j,l] > 0}  (Storage_in [c, j, l, h, td]  * storage_eff_in  [j, l])) 
+				+ t_op [h, td] * (   (sum {l in LAYERS: storage_eff_in [j,l] > 0}  (Storage_in [c, j, l, h, td]  * storage_eff_in  [j, l]))
 				                   - (sum {l in LAYERS: storage_eff_out [j,l] > 0} (Storage_out [c, j, l, h, td] / storage_eff_out [j, l])))
 				);
 
 # [Eq. 15] Bounding daily storage
 subject to impose_daily_storage {c in REGIONS, j in STORAGE_DAILY, t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]}:
 	Storage_level [c, j, t] = F_t [c, j, h, td];
-	
+
 # [Eq. 16] Bounding seasonal storage
 subject to limit_energy_stored_to_maximum {c in REGIONS, j in STORAGE_TECH diff STORAGE_DAILY , t in PERIODS}:
 	Storage_level [c, j, t] <= F [c, j];# Never exceed the size of the storage unit
-	
+
 # [Eqs. 17-18] Each storage technology can have input/output only to certain layers. If incompatible then the variable is set to 0
 subject to storage_layer_in {c in REGIONS, j in STORAGE_TECH, l in LAYERS, h in HOURS, td in TYPICAL_DAYS}:
 	Storage_in [c, j, l, h, td] * (ceil (storage_eff_in [j, l]) - 1) = 0;
 subject to storage_layer_out {c in REGIONS, j in STORAGE_TECH, l in LAYERS, h in HOURS, td in TYPICAL_DAYS}:
 	Storage_out [c, j, l, h, td] * (ceil (storage_eff_out [j, l]) - 1) = 0;
 
-# [Eq. 19] limit the Energy to power ratio. 
+# [Eq. 19] limit the Energy to power ratio.
 subject to limit_energy_to_power_ratio {c in REGIONS, j in STORAGE_TECH diff {"BEV_BATT","PHEV_BATT"}, l in LAYERS, h in HOURS, td in TYPICAL_DAYS}:
 	Storage_in [c, j, l, h, td] * storage_charge_time[c,j] + Storage_out [c, j, l, h, td] * storage_discharge_time[c,j] <=  F [c, j] * storage_availability[j];
 
-# [Eq. 2.19-bis] limit the Energy to power ratio. 
+# [Eq. 2.19-bis] limit the Energy to power ratio.
 subject to limit_energy_to_power_ratio_bis {c in REGIONS, i in V2G, j in EVs_BATT_OF_V2G[i], l in LAYERS, h in HOURS, td in TYPICAL_DAYS}:
     Storage_in [c, j, l, h, td] * storage_charge_time[c,j] + (Storage_out [c, j, l, h, td] + layers_in_out[i,"ELECTRICITY"]* F_t [c, i, h, td]) * storage_discharge_time[c,j]  <= ( F [c, j] - F_t [c,i,h,td] / vehicule_capacity [i] * batt_per_car[i] ) * storage_availability[j];
 
@@ -429,11 +427,11 @@ subject to extra_grid{c in REGIONS}:
 subject to extra_dhn{c in REGIONS}:
 	F [c,"DHN"] = sum {j in TECHNOLOGIES_OF_END_USES_TYPE["HEAT_LOW_T_DHN"]} (F [c,j]);
 
-	
+
 ## Additional constraints
 #------------------------
-	
-# [Eq. 24] Fix nuclear production constant : 
+
+# [Eq. 24] Fix nuclear production constant :
 subject to constantNuc {c in REGIONS, h in HOURS, td in TYPICAL_DAYS}:
 	F_t [c,"NUCLEAR", h, td] = Power_nuclear[c];
 
@@ -448,8 +446,12 @@ subject to operating_strategy_mobility_freight{c in REGIONS, j in TECHNOLOGIES_O
 	F_t [c, j, h, td]   = Shares_mobility_freight [c,j] * (end_uses_input[c,"MOBILITY_FREIGHT"] * mob_freight_time_series [c, h, td] / t_op [h, td] );
 
 # adding additional freight
-subject to additional_freight{c in REGIONS} :
-	sum{j in TECHNOLOGIES_OF_END_USES_CATEGORY["MOBILITY_FREIGHT"]} (Shares_mobility_freight [c,j]) = (Exch_Freight[c] + end_uses_input[c,"MOBILITY_FREIGHT"])/(end_uses_input[c,"MOBILITY_FREIGHT"]);
+#subject to additional_freight{c in REGIONS} :
+	#sum{j in TECHNOLOGIES_OF_END_USES_CATEGORY["MOBILITY_FREIGHT"]} (Shares_mobility_freight [c,j]) = if Exch_Freight[c] > 0
+		#then
+			#(Exch_Freight[c] + end_uses_input[c,"MOBILITY_FREIGHT"])/(end_uses_input[c,"MOBILITY_FREIGHT"])
+		#else
+			#0;
 
 # additional freight due to exchanges calculation
 subject to freight_of_exchanges{c in REGIONS} :
@@ -457,22 +459,21 @@ subject to freight_of_exchanges{c in REGIONS} :
 
 # [Eq. 26] To impose a constant share in the mobility
 subject to Freight_shares {c in REGIONS} :
-	Share_freight_train[c] + Share_freight_road[c] + Share_freight_boat[c] = sum{j in TECHNOLOGIES_OF_END_USES_CATEGORY["MOBILITY_FREIGHT"]} (Shares_mobility_freight [c,j]); # =1 should work... But don't know why it doesn't
+	Share_freight_train[c] + Share_freight_road[c] + Share_freight_boat[c] + Share_freight_air[c] = 1;
 
-	
 ## Thermal solar & thermal storage:
 
 # [Eq. 26] relation between decentralised thermal solar power and capacity via period capacity factor.
 subject to thermal_solar_capacity_factor {c in REGIONS, j in TECHNOLOGIES_OF_END_USES_TYPE["HEAT_LOW_T_DECEN"] diff {"DEC_SOLAR"}, h in HOURS, td in TYPICAL_DAYS}:
 	F_t_solar [c, j, h, td] <= F_solar[c,j] * c_p_t["DEC_SOLAR", c, h, td];
-	
-# [Eq. 27] Overall thermal solar is the sum of specific thermal solar 	
+
+# [Eq. 27] Overall thermal solar is the sum of specific thermal solar
 subject to thermal_solar_total_capacity {c in REGIONS} :
 	F [c,"DEC_SOLAR"] = sum {j in TECHNOLOGIES_OF_END_USES_TYPE["HEAT_LOW_T_DECEN"] diff {"DEC_SOLAR"}} F_solar[c,j];
 
 # [Eq. 28]: Decentralised thermal technology must supply a constant share of heat demand.
 subject to decentralised_heating_balance  {c in REGIONS, j in TECHNOLOGIES_OF_END_USES_TYPE["HEAT_LOW_T_DECEN"] diff {"DEC_SOLAR"}, i in TS_OF_DEC_TECH[j], h in HOURS, td in TYPICAL_DAYS}:
-	F_t [c, j, h, td] + F_t_solar [c, j, h, td] + sum {l in LAYERS } ( Storage_out [c, i, l, h, td] - Storage_in [c, i, l, h, td])  
+	F_t [c, j, h, td] + F_t_solar [c, j, h, td] + sum {l in LAYERS } ( Storage_out [c, i, l, h, td] - Storage_in [c, i, l, h, td])
 		= Shares_lowT_dec[c,j] * (end_uses_input[c,"HEAT_LOW_T_HW"] / total_time + end_uses_input[c,"HEAT_LOW_T_SH"] * heating_time_series [c, h, td] / t_op [h, td]);
 
 ## EV storage :
@@ -480,15 +481,15 @@ subject to decentralised_heating_balance  {c in REGIONS, j in TECHNOLOGIES_OF_EN
 # [Eq. 32] Compute the equivalent size of V2G batteries based on the share of V2G, the amount of cars and the battery capacity per EVs technology
 subject to EV_storage_size {c in REGIONS, j in V2G, i in EVs_BATT_OF_V2G[j]}:
 	F [c,i] = F[c,j] / vehicule_capacity [j] * batt_per_car[j];# Battery size proportional to the amount of cars
-	
+
 # [Eq. 33]  Impose EVs to be supplied by their battery.
 subject to EV_storage_for_V2G_demand {c in REGIONS, j in V2G, i in EVs_BATT_OF_V2G[j], h in HOURS, td in TYPICAL_DAYS}:
 	Storage_out [c,i,"ELECTRICITY",h,td] >=  - layers_in_out[j,"ELECTRICITY"]* F_t [c, j, h, td];
-	
+
 # [Eq. 33 bis] Impose a minimum state of charge of EV batteries at some hours of the day
 subject to EV_storage_min_SOC {c in REGIONS, j in V2G, i in EVs_BATT_OF_V2G[j], t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]}:
 	Storage_level [c, i, t] >= F [c,i] * state_of_charge_ev[j,h];
-		
+
 ## Peak demand :
 
 # [Eq. 34] Peak in decentralized heating
@@ -502,10 +503,6 @@ subject to max_dhn_heat_demand {c in REGIONS, h in HOURS, td in TYPICAL_DAYS}:
 # Peak in DHN
 subject to peak_lowT_dhn {c in REGIONS}:
 	sum {j in TECHNOLOGIES_OF_END_USES_TYPE ["HEAT_LOW_T_DHN"], i in STORAGE_OF_END_USES_TYPE["HEAT_LOW_T_DHN"]} (F [c,j] + F[c,i]/storage_discharge_time[c,i]) >= peak_sh_factor[c] * Max_Heat_Demand[c];
-	
-# [Eq. 34] Peak in space cooling
-subject to peak_space_cooling {c in REGIONS, j in TECHNOLOGIES_OF_END_USES_TYPE["SPACE_COOLING"], h in HOURS, td in TYPICAL_DAYS}:
-	F [c,j] >= peak_sc_factor[c] * F_t [c, j, h, td] ;
 
 ## Adaptation for the case study: Constraints needed for the application to Switzerland (not needed in standard LP formulation)
 #-----------------------------------------------------------------------------------------------------------------------
@@ -513,7 +510,7 @@ subject to peak_space_cooling {c in REGIONS, j in TECHNOLOGIES_OF_END_USES_TYPE[
 # [Eq. 36]  constraint to reduce the GWP subject to Minimum_gwp_reduction :
 subject to Minimum_GWP_reduction {c in REGIONS}:
 	sum{r in RESOURCES} (CO2_net [c,r]) <= gwp_limit[c];
-	
+
 # [Eq. 36]  constraint to reduce the GWP subject to Minimum_gwp_reduction :
 # Macro-cells: modified to account for direct emissions only
 subject to Minimum_GWP_reduction_global :
@@ -522,20 +519,20 @@ subject to Minimum_GWP_reduction_global :
 
 # [Eq. 37] Minimum share of RE in primary energy supply
 subject to Minimum_RE_share {c in REGIONS} :
-	sum {j in RE_RESOURCES, t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (R_t_local [c, j, h, td]+ R_t_exterior [c, j, h, td] + R_t_import [c, j, h, td]) * t_op [h, td] 
+	sum {j in RE_RESOURCES, t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (R_t_local [c, j, h, td]+ R_t_exterior [c, j, h, td] + R_t_import [c, j, h, td]) * t_op [h, td]
 	>=	re_share_primary[c] *
 	sum {j in RESOURCES, t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (R_t_local [c, j, h, td]+ R_t_exterior [c, j, h, td] + R_t_import [c, j, h, td]) * t_op [h, td]	;
 
 
-## Those 2 equations or the 2 after must be activated but not both	
+## Those 2 equations or the 2 after must be activated but not both
 # [Eq. 38] Definition of min/max output of each technology as % of total output in a given layer.
 subject to f_max_perc_train_pub {c in REGIONS}:
-	sum {t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c,"TRAIN_PUB",h,td] * t_op[h,td]) 
+	sum {t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c,"TRAIN_PUB",h,td] * t_op[h,td])
 	<= fmax_perc [c,"TRAIN_PUB"] * sum {j in TECHNOLOGIES_OF_END_USES_TYPE["MOB_PUBLIC"], t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c, j, h, td] * t_op[h,td]);
-	
+
 # [Eq. 38] Definition of min/max output of each technology as % of total output in a given layer.
 subject to f_max_perc_tramway {c in REGIONS}:
-	sum {t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c,"TRAMWAY_TROLLEY",h,td] * t_op[h,td]) 
+	sum {t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c,"TRAMWAY_TROLLEY",h,td] * t_op[h,td])
 	<= fmax_perc [c,"TRAMWAY_TROLLEY"] * sum {j in TECHNOLOGIES_OF_END_USES_TYPE["MOB_PUBLIC"], t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c, j, h, td] * t_op[h,td]);
 
 subject to f_max_perc {c in REGIONS, eut in END_USES_TYPES, j in TECHNOLOGIES_OF_END_USES_TYPE[eut]}:
@@ -543,32 +540,17 @@ subject to f_max_perc {c in REGIONS, eut in END_USES_TYPES, j in TECHNOLOGIES_OF
 	<= fmax_perc [c,j] *(sum {j2 in TECHNOLOGIES_OF_END_USES_TYPE[eut], t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c, j2, h, td] * t_op[h,td])
 	+ sum {r in RESOURCES, t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (layers_in_out [r, eut] * (R_t_local [c, r, h, td] + R_t_exterior [c, r, h, td] + R_t_import [c, r, h, td] - (1 + exchange_losses[r])* R_t_export [c, r, h, td])));
 subject to f_min_perc {c in REGIONS, eut in END_USES_TYPES, j in TECHNOLOGIES_OF_END_USES_TYPE[eut]}:
-	sum {t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c,j,h,td] * t_op[h,td]) >= fmin_perc [c,j] * 
+	sum {t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c,j,h,td] * t_op[h,td]) >= fmin_perc [c,j] *
 	(sum {j2 in TECHNOLOGIES_OF_END_USES_TYPE[eut], t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (F_t [c, j2, h, td] * t_op[h,td])
 	+ sum {r in RESOURCES, t in PERIODS, h in HOUR_OF_PERIOD[t], td in TYPICAL_DAY_OF_PERIOD[t]} (layers_in_out [r, eut] * (R_t_local [c, r, h, td] + R_t_exterior [c, r, h, td] + R_t_import [c, r, h, td] - (1 + exchange_losses[r])* R_t_export [c, r, h, td])));
 
 # [Eq. 39] Energy efficiency is a fixed cost
 subject to extra_efficiency{c in REGIONS}:
 	F [c,"EFFICIENCY"] = 1 / (1 + i_rate);
-	
+
 # [Eq. ..] Limit electricity import capacity
 subject to max_elec_import {c in REGIONS, h in HOURS, td in TYPICAL_DAYS}:
-	R_t_exterior [c,"ELECTRICITY", h, td] * t_op [h, td] <= import_capacity[c]; 
-
-## Variant equations for hydro dams	
-# [Eq. 40] Seasonal storage in hydro dams.
-# When installed power of new dams 0 -> 0.44, maximum storage capacity changes linearly 0 -> 2400 GWh/y
-subject to storage_level_hydro_dams {c in REGIONS diff RWITHOUTDAM}: 
-	F [c,"DAM_STORAGE"] <= f_min [c,"DAM_STORAGE"] + (f_max [c,"DAM_STORAGE"]-f_min [c,"DAM_STORAGE"]) * (F [c,"HYDRO_DAM"] - f_min [c,"HYDRO_DAM"])/(f_max [c,"HYDRO_DAM"] - f_min [c,"HYDRO_DAM"]);
-
-# [Eq. 41] Hydro dams can stored the input energy and restore it whenever. Hence, inlet is the input river and outlet is bounded by max capacity
-subject to impose_hydro_dams_inflow {c in REGIONS, h in HOURS, td in TYPICAL_DAYS}: 
-	Storage_in [c, "DAM_STORAGE", "ELECTRICITY", h, td] = F_t [c, "HYDRO_DAM", h, td];
-
-# [Eq. 42] Hydro dams production is lower than installed F_t capacity:
-subject to limit_hydro_dams_output {c in REGIONS, h in HOURS, td in TYPICAL_DAYS}: 
-	Storage_out [c, "DAM_STORAGE", "ELECTRICITY", h, td] <= F [c,"HYDRO_DAM"];
-
+	R_t_exterior [c,"ELECTRICITY", h, td] * t_op [h, td] <= import_capacity[c];
 
 # [Eq. 39] Limit surface area for solar
 subject to solar_area_limited250km2 {c in REGIONS} :
@@ -581,7 +563,7 @@ subject to solar_area_limited250km2 {c in REGIONS} :
 
 subject to reciprocity_of_Exchanges {c1 in REGIONS, c2 in REGIONS, i in RESOURCES, h in HOURS, td in TYPICAL_DAYS} :
 	Exch_imp[c1,c2,i,h,td] - Exch_exp[c1,c2,i,h,td] = - Exch_imp[c2,c1,i,h,td] + Exch_exp[c2,c1,i,h,td];
-	
+
 subject to resources_no_exchanges {c1 in REGIONS, c2 in REGIONS, n in NOEXCHANGES, h in HOURS, td in TYPICAL_DAYS} :
 	Exch_imp [c1,c2,n,h,td] = 0;
 subject to resources_no_exchanges2 {c1 in REGIONS, c2 in REGIONS, n in NOEXCHANGES, h in HOURS, td in TYPICAL_DAYS} :
@@ -596,7 +578,7 @@ subject to invariable_transfer_capacity {c1 in REGIONS, c2 in REGIONS, i in RESO
 	Transfer_capacity [c1,c2,i] = tc_min [c1,c2,i];
 subject to bidirectonal_exchanges {c1 in REGIONS, c2 in REGIONS, i in EXCHANGE_NETWORK_BIDIRECTIONAL}:
 	Transfer_capacity [c1,c2,i] = Transfer_capacity [c2,c1,i];
-	
+
 subject to importation {c1 in REGIONS, i in RESOURCES, h in HOURS, td in TYPICAL_DAYS}:
 	R_t_import[c1, i, h, td]  = sum{c2 in REGIONS} Exch_imp[c1,c2,i,h,td];
 subject to exportation {c1 in REGIONS, i in RESOURCES, h in HOURS, td in TYPICAL_DAYS}:
@@ -612,4 +594,4 @@ minimize obj:  sum{c in REGIONS} (TotalCost[c] - Curt[c]*0.000001);
 
 ## formula for GWP_op optimization
 # sum{c in REGIONS, r in RESOURCES} (GWP_op [c,r]);
-# 
+#

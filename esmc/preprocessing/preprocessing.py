@@ -163,7 +163,6 @@ def step2_in(out_path, countries, data, step1_out, EUD_params=None, RES_params=N
         # for EUD timeseries
         EUD_params = {'Electricity (%_elec)': 'param electricity_time_series :=',
                       'Space Heating (%_sh)': 'param heating_time_series :=',
-                      'Space Cooling': 'param cooling_time_series :=',
                       'Passanger mobility (%_pass)': 'param mob_pass_time_series :=',
                       'Freight mobility (%_freight)': 'param mob_freight_time_series :='}
     if RES_params is None:
@@ -171,9 +170,9 @@ def step2_in(out_path, countries, data, step1_out, EUD_params=None, RES_params=N
         RES_params = {'PV': 'PV', 'Wind_offshore': 'WIND_OFFSHORE', 'Wind_onshore': 'WIND_ONSHORE'}
     if RES_mult_params is None:
         # for resources timeseries that have several techs linked to it
-        RES_mult_params = {'Tidal': ['TIDAL_STREAM', 'TIDAL_RANGE'], 'Hydro_dam': ['HYDRO_DAM'],
+        RES_mult_params = {'Hydro_dam': ['HYDRO_DAM'],
                            'Hydro_river': ['HYDRO_RIVER'],
-                           'Solar': ['DHN_SOLAR', 'DEC_SOLAR', 'PT_COLLECTOR', 'ST_COLLECTOR', 'STIRLING_DISH']}
+                           'Solar': ['DHN_SOLAR', 'DEC_SOLAR']}
 
     ## READING OUTPUT OF STEP1 ##
     TD_of_days = pd.read_csv(step1_out, names=['TD_of_days'])

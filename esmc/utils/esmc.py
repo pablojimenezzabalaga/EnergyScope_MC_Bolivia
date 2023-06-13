@@ -18,6 +18,7 @@ import pandas as pd
 import csv
 from pathlib import Path
 from datetime import datetime
+import shutil
 
 
 # TODO
@@ -103,7 +104,9 @@ class Esmc:
         return
 
     # TODO add an automated initialization for specific pipeline
-
+    def delete_if_exists(path):
+        if path.exists():
+            shutil.rmtree(path)
     def init_regions(self):
         logging.info('Initialising regions: ' + ', '.join(self.regions_names))
         data_dir = self.project_dir / 'Data' / str(self.year)
@@ -492,12 +495,10 @@ class Esmc:
         # and compute rescaled typical days ts and peak_sh_factor for each region
         self.ta.generate_t_h_td()
         peak_sh_factor = pd.DataFrame(0, index=self.regions_names, columns=['peak_sh_factor'])
-        peak_sc_factor = pd.DataFrame(0, index=self.regions_names, columns=['peak_sc_factor'])
         for r in self.regions:
             self.regions[r].rescale_td_ts(self.ta.td_count)
             self.regions[r].compute_peak_sh_and_sc()
             peak_sh_factor.loc[r, 'peak_sh_factor'] = self.regions[r].peak_sh_factor
-            peak_sc_factor.loc[r, 'peak_sc_factor'] = self.regions[r].peak_sc_factor
 
         t_h_td = self.ta.t_h_td.copy()
         t_h_td['par_l'] = '('
@@ -527,9 +528,8 @@ class Esmc:
                               '# -----------------------------', ''])
         # printing nbr_tds
         dp.print_param(param=self.nbr_td, out_path=dat_file, name='nbr_tds')
-        # printing peak_sh_factor and peak_sc_factor
+        # printing peak_sh_factor
         dp.print_df(df=dp.ampl_syntax(peak_sh_factor), out_path=dat_file, name='param ')
-        dp.print_df(df=dp.ampl_syntax(peak_sc_factor), out_path=dat_file, name='param ')
 
         # TODO automise this
 
@@ -538,7 +538,6 @@ class Esmc:
             # for EUD timeseries
             eud_params = {'ELECTRICITY': 'param electricity_time_series :=',
                           'HEAT_LOW_T_SH': 'param heating_time_series :=',
-                          'SPACE_COOLING': 'param cooling_time_series :=',
                           'MOBILITY_PASSENGER': 'param mob_pass_time_series :=',
                           'MOBILITY_FREIGHT': 'param mob_freight_time_series :='}
         if res_params is None:
@@ -547,8 +546,7 @@ class Esmc:
                           'HYDRO_DAM': 'HYDRO_DAM', 'HYDRO_RIVER': 'HYDRO_RIVER'}
         if res_mult_params is None:
             # for resources timeseries that have several techs linked to it
-            res_mult_params = {'TIDAL': ['TIDAL_STREAM', 'TIDAL_RANGE'],
-                               'SOLAR': ['DHN_SOLAR', 'DEC_SOLAR', 'PT_COLLECTOR', 'ST_COLLECTOR', 'STIRLING_DISH']}
+            res_mult_params = {'SOLAR': ['DHN_SOLAR', 'DEC_SOLAR']}
 
         # printing EUD timeseries param
         for i in eud_params.keys():

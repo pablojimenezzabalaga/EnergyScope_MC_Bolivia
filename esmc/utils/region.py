@@ -171,9 +171,9 @@ class Region:
                  self.data['Misc'] = d
              else:
                  # if not ref_region replace edited values
-                for key, value in d:
+                for key, value in d.items():
                     self.data['Misc'][key] = value
-
+                 #self.data['Misc'] = d
         return
 
 
@@ -210,14 +210,13 @@ class Region:
         # TODO automatise this
         # default name of demand and prod ts if not given
         if demand_ts is None:
-            demand_ts = ['ELECTRICITY', 'HEAT_LOW_T_SH', 'SPACE_COOLING']
+            demand_ts = ['ELECTRICITY', 'HEAT_LOW_T_SH']
         if prod_ts is None:
-            prod_ts = ['PV', 'WIND_ONSHORE', 'WIND_OFFSHORE', 'HYDRO_DAM', 'HYDRO_RIVER', 'TIDAL', 'SOLAR']
+            prod_ts = ['PV', 'WIND_ONSHORE', 'WIND_OFFSHORE', 'HYDRO_DAM', 'HYDRO_RIVER', 'SOLAR']
 
         # dictionnary for time series linking with multiple entries
         demand_map = {'ELECTRICITY':['LIGHTING']}
-        res_mult_params = {'TIDAL': ['TIDAL_STREAM', 'TIDAL_RANGE'],
-                           'SOLAR': ['PT_POWER_BLOCK', 'ST_POWER_BLOCK', 'STIRLING_DISH']} # not putting DHN_SOLAR and DEC_SOLAR because f_max is infinite...
+        res_mult_params = {'SOLAR': ['DHN_SOLAR', 'DEC_SOLAR']} # not putting DHN_SOLAR and DEC_SOLAR} # not putting DHN_SOLAR and DEC_SOLAR because f_max is infinite...
             # TODO improve integration of solar_area and limits and adapt
 
         # select only simple demand and prod ts
@@ -335,9 +334,6 @@ class Region:
         max_sh_yr = self.data['Time_series'].loc[:,'HEAT_LOW_T_SH'].max()
         self.peak_sh_factor = max_sh_yr/max_sh_td
 
-        max_sc_td = self.ts_td.loc[('SPACE_COOLING', slice(None)), :].max().max()
-        max_sc_yr = self.data['Time_series'].loc[:, 'SPACE_COOLING'].max()
-        self.peak_sc_factor = max_sc_yr / max_sc_td
         return
 
     def compute_tau(self, i_rate=0.015):

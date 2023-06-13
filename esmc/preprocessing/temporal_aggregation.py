@@ -137,8 +137,8 @@ class TemporalAggregation:
 
         """
         # demand and production time series names
-        prod_ts = ['PV', 'WIND_ONSHORE', 'WIND_OFFSHORE', 'HYDRO_DAM', 'HYDRO_RIVER', 'TIDAL', 'SOLAR']
-        demand_ts = ['ELECTRICITY','HEAT_LOW_T_SH','SPACE_COOLING']
+        prod_ts = ['PV', 'WIND_ONSHORE', 'WIND_OFFSHORE', 'HYDRO_DAM', 'HYDRO_RIVER', 'SOLAR']
+        demand_ts = ['ELECTRICITY','HEAT_LOW_T_SH']
 
         self.weights.loc[:,'Weights_n'] = 0 # initialize normalized weights column
         # NORMALIZING WEIGHTS ACCROSS COUNTRIES #
@@ -190,6 +190,10 @@ class TemporalAggregation:
         if dat_file is None:
             # path to the .dat file
             dat_file = self.dat_dir / ('data_' + str(self.Nbr_TD) + '.dat')
+
+        # Open and close the file to ensure it exists
+        with open(dat_file, 'a'):
+            pass
 
         # set n_data columns index to numerical index
         n_data = self.n_data.copy()
