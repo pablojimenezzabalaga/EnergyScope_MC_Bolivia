@@ -1,6 +1,6 @@
 ampl: option times 0, gentimes 0;ampl: option 'times' '1';#				incremental	total
 #phase		seconds		memory		memory
-#execute	0.078125	27136456	27136456
+#execute	0.0625		27136456	27136456
 ampl: option times 1, gentimes 0;### option ...
 #				incremental	total
 #phase		seconds		memory		memory
@@ -23,16 +23,16 @@ ampl: solve;### solve ...
 ## 107            0            0            0  DIMENSIONS
 ## 108            0            0            0  DAYS
 ## 109            0            0            0  Nbr_TD
-## 110     0.015625     0.015625            0  Ndata
-## 111      6.45312      6.46875     11602128  Distance
-## 112            0      6.46875            0  Selected_TD
-## 114            0      6.46875      4202528  Cluster_matrix
-## 116            0      6.46875      3232280  allocate_1TD_per_day
-## 118      0.03125          6.5     14759016  other_TD_null
-## 120            0          6.5      3225600  representation
-## 122            0          6.5            0  limit_number_of_TD
-## 124     0.015625      6.51562      3187200  Euclidean_distance
-#genmod		6.51562		40208752	67346768
+## 110            0            0            0  Ndata
+## 111      6.54688      6.54688     11602128  Distance
+## 112            0      6.54688            0  Selected_TD
+## 114            0      6.54688      4202528  Cluster_matrix
+## 116     0.015625       6.5625      3232280  allocate_1TD_per_day
+## 118     0.015625      6.57812     14759016  other_TD_null
+## 120            0      6.57812      3225600  representation
+## 122            0      6.57812            0  limit_number_of_TD
+## 124     0.015625      6.59375      3187200  Euclidean_distance
+#genmod		6.59375		40208752	67346768
 #merge		0		2097160		69443928
 #collect	0.03125		41178704	110622632
 
@@ -51,135 +51,72 @@ presolve results:
 	nba cycles:		1
 	bound row scans:	133956
 	row-scan updates:	0
-#presolve	0.109375	33774776	144397408
+#presolve	0.09375		33774776	144397408
 #output		0.21875		4194312		148591720
-#Total		6.95312
-CPLEX 22.1.1.0: mipdisplay=5
-
-mipinterval=1000
-
-mipgap=1e-6
-
-Reduced MIP has 133956 rows, 133590 columns, and 533630 nonzeros.
-
-Reduced MIP has 133590 binaries, 0 generals, 0 SOSs, and 0 indicators.
-
-Found incumbent of value 0.187740 after 2.95 sec. (3386.92 ticks)
-
-Probing time = 0.80 sec. (39.18 ticks)
-
-Detecting symmetries...
-
-Reduced MIP has 133956 rows, 133590 columns, and 533630 nonzeros.
-
-Reduced MIP has 133590 binaries, 0 generals, 0 SOSs, and 0 indicators.
-
-Probing time = 0.73 sec. (39.10 ticks)
-
-Clique table members: 133590.
-
-MIP emphasis: balance optimality and feasibility.
-
-MIP search method: dynamic search.
-
-Parallel mode: deterministic, using up to 8 threads.
-
-Parallel mode: deterministic, using up to 2 threads for parallel tasks at root LP.
-
-Root relaxation solution time = 10.73 sec. (4114.57 ticks)
-
-
-
-        Nodes                                         Cuts/
-
-   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
-
-
-
-*     0+    0                            0.1877        0.0000           100.00%
-
-Found incumbent of value 0.187740 after 17.44 sec. (9479.31 ticks)
-
-
-
-        Nodes                                         Cuts/
-
-   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
-
-
-
-*     0+    0                            0.0969        0.0000           100.00%
-
-Found incumbent of value 0.096934 after 17.45 sec. (9480.33 ticks)
-
-
-
-        Nodes                                         Cuts/
-
-   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
-
-
-
-*     0+    0                            0.0950        0.0000           100.00%
-
-Found incumbent of value 0.095013 after 17.45 sec. (9480.84 ticks)
-
-
-
-        Nodes                                         Cuts/
-
-   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
-
-
-
-*     0+    0                            0.0937        0.0000           100.00%
-
-Found incumbent of value 0.093740 after 17.45 sec. (9481.35 ticks)
-
-
-
-        Nodes                                         Cuts/
-
-   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
-
-
-
-*     0+    0                            0.0911        0.0000           100.00%
-
-Found incumbent of value 0.091112 after 17.47 sec. (9481.86 ticks)
-
-
-
-        Nodes                                         Cuts/
-
-   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
-
-
-
-*     0     0      integral     0        0.0781        0.0781     8251    0.00%
-
-Elapsed time = 17.50 sec. (9518.97 ticks, tree = 0.00 MB)
-
-Found incumbent of value 0.078116 after 17.50 sec. (9518.97 ticks)
-
-
-
-Root node processing (before b&c):
-
-  Real time             =   17.53 sec. (9521.39 ticks)
-
-Parallel b&c, 8 threads:
-
-  Real time             =    0.00 sec. (0.00 ticks)
-
-  Sync time (average)   =    0.00 sec.
-
-  Wait time (average)   =    0.00 sec.
-
-                          ------------
-
-Total (root+branch&cut) =   17.53 sec. (9521.39 ticks)
-
+#Total		7
+CPLEX 22.1.1.0: mipdisplay=5
+mipinterval=1000
+mipgap=1e-6
+Reduced MIP has 133956 rows, 133590 columns, and 533630 nonzeros.
+Reduced MIP has 133590 binaries, 0 generals, 0 SOSs, and 0 indicators.
+Found incumbent of value 0.187740 after 2.92 sec. (3386.92 ticks)
+Probing time = 0.84 sec. (39.18 ticks)
+Detecting symmetries...
+Reduced MIP has 133956 rows, 133590 columns, and 533630 nonzeros.
+Reduced MIP has 133590 binaries, 0 generals, 0 SOSs, and 0 indicators.
+Probing time = 0.70 sec. (39.10 ticks)
+Clique table members: 133590.
+MIP emphasis: balance optimality and feasibility.
+MIP search method: dynamic search.
+Parallel mode: deterministic, using up to 8 threads.
+Parallel mode: deterministic, using up to 2 threads for parallel tasks at root LP.
+Root relaxation solution time = 10.84 sec. (4114.57 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0+    0                            0.1877        0.0000           100.00%
+Found incumbent of value 0.187740 after 17.50 sec. (9479.31 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0+    0                            0.0969        0.0000           100.00%
+Found incumbent of value 0.096934 after 17.52 sec. (9480.33 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0+    0                            0.0950        0.0000           100.00%
+Found incumbent of value 0.095013 after 17.52 sec. (9480.84 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0+    0                            0.0937        0.0000           100.00%
+Found incumbent of value 0.093740 after 17.52 sec. (9481.35 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0+    0                            0.0911        0.0000           100.00%
+Found incumbent of value 0.091112 after 17.53 sec. (9481.86 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0     0      integral     0        0.0781        0.0781     8251    0.00%
+Elapsed time = 17.56 sec. (9518.97 ticks, tree = 0.00 MB)
+Found incumbent of value 0.078116 after 17.56 sec. (9518.97 ticks)
+
+Root node processing (before b&c):
+  Real time             =   17.59 sec. (9521.39 ticks)
+Parallel b&c, 8 threads:
+  Real time             =    0.00 sec. (0.00 ticks)
+  Sync time (average)   =    0.00 sec.
+  Wait time (average)   =    0.00 sec.
+                          ------------
+Total (root+branch&cut) =   17.59 sec. (9521.39 ticks)
 CPLEX 22.1.1.0: optimal integer solution; objective 0.07811626591
 8251 MIP simplex iterations
 0 branch-and-bound nodes
@@ -192,10 +129,10 @@ ampl: option times 0, gentimes 0;### option ...
 ampl: option 'times' '0';ampl: option times 0, gentimes 1;ampl: option 'gentimes' '0';### option ...
 ampl: option omit_zero_rows 0;_display _ampl_elapsed_time;;_display 0 1 1
 _ampl_elapsed_time
-7.031000000000002
+7.078000000000003
 ampl: option omit_zero_rows 0;_display _solve_elapsed_time;;_display 0 1 1
 _solve_elapsed_time
-18.063
+18.141
 ampl: option omit_zero_rows 0;_display solve_result_num;;_display 0 1 1
 solve_result_num
 2
