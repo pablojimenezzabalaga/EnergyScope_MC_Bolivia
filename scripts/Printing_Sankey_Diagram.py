@@ -1,0 +1,4 @@
+from esmc.postprocessing.draw_sankey.ESSankey import drawSankey
+from esmc.postprocessing.draw_sankey.output_to_sankey_csv import write_sankey_file
+
+write_sankey_file(space_id="BN_CB_CH_LP_OR_PT_SABE_SACA_SACHA_SACHQ_SAEE_SAER_SAGB_SAIT_SAMI_SANA_SASI_SASM_SATA_SAVC_SAYA_SC_TJ", case_study="test_Bolivia_2021")

@@ -13,12 +13,12 @@ for t in tds:
     print('Nbr_TDs', t)
 
     # specify ampl_path (set None if ampl is in Path environment variable or the path to ampl if not)
-    ampl_path = Path(r'C:\Program Files\AMPL\ampl_mswin64')
+    ampl_path = None
 
     # info to switch off unused constraints
     gwp_limit_overall = None
     re_share_primary = None
-    f_perc = False
+    f_perc = True
 
     # define configuration
     config = {'case_study': 'test_Bolivia_2021',

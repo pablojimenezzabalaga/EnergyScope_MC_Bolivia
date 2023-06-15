@@ -4,7 +4,7 @@
 	"power_density_pv" : 0.2367,
     "power_density_solar_thermal" : 0.3174,
 	"c_grid_extra" : 367.8,
-	"loss_network" : {"ELECTRICITY": 0.17142557917355067, "HEAT_LOW_T_DHN": 5.0E-02},
+	"loss_network" : {"ELECTRICITY": 0.11364022253865, "HEAT_LOW_T_DHN": 5.0E-02},
 
 
 	"vehicule_capacity": {"CAR_PHEV": 5.04E+01, "CAR_BEV": 5.04E+01},
